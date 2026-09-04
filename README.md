@@ -27,6 +27,12 @@ SeamSlot<String>(
 
 ### Bones are measured, not guessed
 
+<img src="https://raw.githubusercontent.com/unanswered-dev/seam/main/doc/measured.gif" width="300" alt="Two columns load the same data at the same time. The left one guesses its placeholder and reports 132px of layout shift; the right one reuses the shape it measured and reports 0.">
+
+Two columns, identical data, identical timing. The only difference is the
+memory. The counters underneath total how far the content below each column
+was pushed: **132 px against 0 px**.
+
 A slot renders real content at least once. Seam records the size that content
 occupied, files it against the constraints it was measured under, and reserves
 exactly that space the next time the slot loads. The arrival moves nothing.
@@ -81,6 +87,12 @@ changes size between loads, where a floor would leave visible dead space.
 
 ### Loading is a lattice, not a bit
 
+<img src="https://raw.githubusercontent.com/unanswered-dev/seam/main/doc/lattice.gif" width="300" alt="The same four fields arriving on the same schedule. With one boolean the card stays skeletal until the slowest field lands; with a lattice each field resolves as its own data arrives.">
+
+Same arrival times in both modes. With one boolean the card is still bones at
+1600 ms with `resolved 0/4`; with a lattice the avatar and title are already
+there while the body is mid-stream.
+
 Each slot owns one field and resolves independently. Nothing above it holds the
 screen hostage to its slowest source, which is what a streamed response needs.
 
@@ -123,6 +135,8 @@ SeamScope(
 )
 ```
 
+<img src="https://raw.githubusercontent.com/unanswered-dev/seam/main/doc/schedule.gif" width="300" alt="Three loads of different lengths against the same schedule. At 180ms it settles without ever painting a bone; at 6s the phase escalates past three seconds.">
+
 | Phase | Window | Behaviour |
 |---|---|---|
 | `held` | 0 – 400 ms | Space reserved, nothing painted. Fast loads never flash. |
@@ -147,6 +161,19 @@ offscreen buffer, nothing that *can* drift. Bones repaint; they never rebuild.
 The ticker only runs while something is actually lit.
 
 ---
+
+### Against a real endpoint
+
+<img src="https://raw.githubusercontent.com/unanswered-dev/seam/main/doc/live.gif" width="300" alt="A movie feed loading from a live API, cycling through the absent, stale, partial and fresh states.">
+
+The example's last tab drives all four states against
+`api.sampleapis.com/movies/horror` — each chip runs a real request, and only
+the shape of the load around it differs. Cold start into bones, a warm start
+that keeps the cached rows readable while refreshing, a streamed arrival
+filling rows in a page at a time, and a fast response that lands inside the
+400 ms hold without painting a bone at all.
+
+Run it with `cd example && flutter run`.
 
 ## Install
 
@@ -261,6 +288,40 @@ prefer one id per **kind** of row (`'feed.row.title'`), not one per item — the
 point is to learn the shape rows share.
 
 ---
+
+## API reference
+
+| Type | What it is |
+|---|---|
+| `SeamValue<T>` | Sealed four-state loading model. Switch over it exhaustively. |
+| `SeamAbsent<T>` · `SeamStale<T>` · `SeamPartial<T>` · `SeamFresh<T>` | The four states, as classes you can pattern-match on. |
+| `SeamSlot<T>` | Renders one field across all four states. The unit you work in. |
+| `SeamScope` | Owns the ticker, memory, light and palette for everything below. Optional. |
+| `SeamController` | The ticker, phase and progress a scope shares. Reach it with `SeamScope.of`. |
+| `SeamMemory` | Records the geometry real content occupied; reserves it next load. |
+| `SeamStore` | Where a persistent memory writes. Implement over your own storage. |
+| `SlotGeometry` · `SlotSamples` | One observation, and the bounded window of observations per slot. |
+| `SeamSchedule` · `SeamPhase` | When the effect may run: `held`, `lit`, `escalated`, `settled`. |
+| `SeamLight` | The single moving light. `.ambient()` or `.sweep()`. |
+| `SeamPalette` | The two colours a bone is painted between. |
+| `SeamBone` · `RenderSeamBone` | One painted placeholder. Used directly only if you build bones by hand. |
+
+### SeamSlot parameters
+
+| Parameter | Default | Purpose |
+|---|---|---|
+| `id` | required | Stable key for this slot's measured geometry. |
+| `value` | required | The field's `SeamValue`. |
+| `builder` | required | Builds real content, for fresh, partial and stale. |
+| `staleBuilder` | null | Build stale content differently — to add an "updated 6 days ago" affordance. |
+| `fallbackHeight` | `16.0` | Placeholder height before anything is measured. |
+| `fallbackWidth` | null | Placeholder width before anything is measured. Null fills. |
+| `borderRadius` | `4` | Corner rounding of the placeholder. |
+| `baseColor` / `highlightColor` | null | Override the scope palette for this slot. |
+| `degradeStale` | `true` | Dim and desaturate stale content so it can't pass for current. |
+| `staleOpacity` | `0.62` | Opacity applied to stale content. |
+| `staleSaturation` | `0.35` | Saturation retained by stale content. |
+| `reserveWhileResolving` | `true` | Hold stale and partial content at the measured height. |
 
 ## Known limitations
 

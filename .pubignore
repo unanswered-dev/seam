@@ -1,0 +1,5 @@
+# Screen recordings live in the repo and are referenced from the README by
+# absolute URL, which is what pub.dev renders anyway. Shipping ~22MB of GIFs
+# inside the package archive would be pure weight for anyone depending on it.
+doc/
+example/android/
