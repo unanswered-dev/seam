@@ -182,6 +182,72 @@ dependencies:
   seam: ^0.1.0
 ```
 
+## Using this with a coding agent
+
+Hand this to Claude, Cursor, Copilot or whatever you use. It carries the parts
+that are easy to get wrong — which state to emit, how to pick slot ids, and
+what not to build by hand.
+
+````text
+Add the `seam` package (pub.dev/packages/seam) to this Flutter app and convert
+its loading states to it.
+
+## Mental model
+seam replaces `bool isLoading` with a four-state value per field:
+
+  SeamValue<T>.absent()                        // nothing yet -> placeholder
+  SeamValue<T>.stale(value, {asOf})            // cached, out of date
+  SeamValue<T>.partial(value, {progress})      // still arriving / streaming
+  SeamValue<T>.fresh(value)                    // current and complete
+
+It is a sealed class, so `switch` over it is exhaustive.
+
+## Setup
+Put one scope near the app root:
+
+  SeamScope(
+    memory: SeamMemory.inMemory(),        // or .persistent(store: mySeamStore)
+    schedule: const SeamSchedule.nng(),   // 400ms suppress / 3s escalate
+    palette: SeamPalette.from(brandColor),// optional; defaults to brightness
+    child: MyApp(),
+  )
+
+A scope is optional — a slot works standalone — but it is what lets every bone
+share one ticker and one measurement store.
+
+## Per field
+  SeamSlot<String>(
+    id: 'article.body',      // stable across builds
+    value: vm.body,
+    fallbackHeight: 16,      // used only until something has been measured
+    builder: (context, body) => Text(body),
+  )
+
+## Rules that matter
+1. Fields resolve independently. Do not gate a whole screen on one flag; give
+   each field its own SeamValue so the title can land before the body.
+2. Only `fresh` is measured. Stale and partial are never recorded, because
+   recording them would teach the placeholder the wrong shape.
+3. Prefer `stale` over `absent` whenever a cache has something. Showing
+   week-old text degraded beats showing a grey box.
+4. Slot ids: one per *kind* for uniform elements ('feed.row.avatar'), one per
+   *item* for variable-length text ('feed.row.title.$index'). A single id
+   shared across differently shaped content makes seam decline to predict.
+5. For streamed text, emit `partial` as it arrives and `fresh` at the end.
+   The slot holds its measured height meanwhile, so text fills reserved space
+   instead of growing the box.
+6. With `SeamMemory.persistent`, call `await memory.load()` once at startup.
+
+## Do not
+- Do not wrap slots in your own shimmer, Opacity animation, or
+  AnimatedSwitcher. seam owns that.
+- Do not use `SeamSchedule.always()` unless you have measured your own
+  thresholds; the default exists because skeletons only help between roughly
+  400ms and 3s.
+- Do not generate a separate "skeleton widget tree". The placeholder is the
+  slot.
+````
+
 ## Usage
 
 A scope is optional. A slot with no scope above it falls back to its own
