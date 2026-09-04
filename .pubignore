@@ -7,9 +7,8 @@ build/
 .packages
 pubspec.lock
 
-# Screen recordings. They live in the repo and the README references them by
-# absolute URL, which is what pub.dev renders anyway, so shipping ~22MB of
-# GIFs to every dependent would be pure weight.
+# The README's recordings are served from a CDN, so nothing lives here now.
+# Kept so any future screenshots or recordings stay out of the archive.
 doc/
 
 # The example is worth publishing; its platform scaffolding and build output
