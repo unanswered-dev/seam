@@ -14,5 +14,15 @@ First release.
   ticker stops when nothing is lit.
 - `SeamPalette` — bone colours, set once on the scope or overridden per slot.
   Resolution is slot, then scope, then platform brightness.
+- `reserveWhileResolving` — stale and partial content is held at the measured
+  height, so streamed text fills reserved space instead of growing the box and
+  reflowing everything below it. Fresh content is never floored, taller content
+  is never clipped, and an unmeasured slot reserves nothing.
 - `SeamSlot` / `SeamBone` — per-field resolution; bones repaint rather than
   rebuild and cost no `saveLayer`.
+
+### Known limitations
+
+- A `SeamSlot` in the `absent` state cannot be used inside `IntrinsicHeight` or
+  `IntrinsicWidth`; its placeholder contains a `LayoutBuilder`.
+- Performance has not been profiled against `shimmer` on a device.

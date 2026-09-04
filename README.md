@@ -49,6 +49,36 @@ guessing:
 - a slot whose observed heights vary more than `varianceTolerance` is treated as
   having no reliable shape, and Seam falls back to a guess.
 
+### Streamed content holds its place
+
+Removing the reflow on arrival is only half of it. Content that arrives in
+pieces starts short and grows, which drags everything below it up the screen
+and then back down — the same reflow, just spread over a second.
+
+So a slot that has been measured keeps reserving that height until its value is
+`fresh`. Streamed text fills into space already held instead of pushing the
+page around.
+
+```dart
+SeamSlot<String>(
+  id: 'article.body',
+  value: vm.body,                  // partial while the response streams
+  reserveWhileResolving: true,     // the default
+  builder: (context, body) => Text(body),
+)
+```
+
+Three rules keep it honest:
+
+- **`fresh` is never floored.** It is the truth everything else is measured
+  against; flooring it would let one long render pin a slot tall forever.
+- **It is a floor, not a fixed height.** Content taller than the reservation is
+  never clipped.
+- **An unmeasured slot reserves nothing.** No invented geometry.
+
+Set `reserveWhileResolving: false` for a slot whose content legitimately
+changes size between loads, where a floor would leave visible dead space.
+
 ### Loading is a lattice, not a bit
 
 Each slot owns one field and resolves independently. Nothing above it holds the
@@ -231,6 +261,20 @@ prefer one id per **kind** of row (`'feed.row.title'`), not one per item — the
 point is to learn the shape rows share.
 
 ---
+
+## Known limitations
+
+**A `SeamSlot` in the `absent` state cannot sit inside `IntrinsicHeight` or
+`IntrinsicWidth`.** Its placeholder uses a `LayoutBuilder` to read the
+constraints it needs for the memory lookup, and `LayoutBuilder` refuses
+intrinsic measurement. The same applies to `Table` with intrinsic column
+widths. Give the slot a bounded parent instead. The fix is to move the lookup
+into the render object's `performLayout` — which is how `reserveWhileResolving`
+already works — and it is not done yet.
+
+**Performance claims here are architectural, not measured.** Bones cost no
+`saveLayer` and share one ticker by construction, but the package has not been
+profiled against `shimmer` on a real device.
 
 ## Status
 
