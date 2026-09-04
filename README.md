@@ -1,6 +1,22 @@
-# seam
+<p align="center">
+  <img src="https://res.cloudinary.com/dludrejgr/image/upload/v1788526651/seam_cijgor.png" width="200" alt="seam">
+</p>
 
-Loading states that don't lie.
+<h3 align="center">Loading states that don't lie.</h3>
+
+<p align="center">
+  Skeletons measured from real content so the arrival moves nothing,
+  per-field resolution for streamed data,<br>
+  and a four-state value model instead of a boolean.
+</p>
+
+<p align="center">
+  <a href="https://pub.dev/packages/seam"><img src="https://img.shields.io/pub/v/seam.svg?color=B0741C" alt="pub version"></a>
+  <a href="https://pub.dev/packages/seam/score"><img src="https://img.shields.io/pub/points/seam?color=B0741C" alt="pub points"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-B0741C.svg" alt="MIT licence"></a>
+</p>
+
+---
 
 Every skeleton package tells the user two lies. Seam is built to stop telling both.
 
