@@ -1,5 +1,29 @@
-# Screen recordings live in the repo and are referenced from the README by
-# absolute URL, which is what pub.dev renders anyway. Shipping ~22MB of GIFs
-# inside the package archive would be pure weight for anyone depending on it.
+# NOTE: .pubignore REPLACES .gitignore when packaging — it does not add to it.
+# Everything .gitignore excluded has to be repeated here, or build output ends
+# up inside the published archive.
+
+.dart_tool/
+build/
+.packages
+pubspec.lock
+
+# Screen recordings. They live in the repo and the README references them by
+# absolute URL, which is what pub.dev renders anyway, so shipping ~22MB of
+# GIFs to every dependent would be pure weight.
 doc/
+
+# The example is worth publishing; its platform scaffolding and build output
+# are not.
+example/build/
+example/.dart_tool/
 example/android/
+example/ios/
+example/linux/
+example/macos/
+example/windows/
+example/web/
+example/.gradle/
+
+.idea/
+*.iml
+*.log
