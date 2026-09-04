@@ -138,21 +138,28 @@ class _SeamSlotState<T> extends State<SeamSlot<T>>
   Size? _lastRecorded;
   SeamPhase _phase = SeamPhase.settled;
 
+  /// Whether the schedule has been started for the current load.
+  bool _scheduleStarted = false;
+
   SeamController get _controller =>
       _scopeController ?? (_fallbackController ??= SeamController(vsync: this));
 
   @override
   void initState() {
     super.initState();
-    if (widget.value.isResolving) _beginResolving();
+    // Deliberately does not start the schedule. The enclosing scope is not
+    // reachable until didChangeDependencies, and reading the schedule here
+    // would build a private fallback controller and adopt its defaults —
+    // silently ignoring the scope's schedule for the whole first load.
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final SeamController? found = SeamScope.maybeOf(context);
-    if (!identical(found, _scopeController)) {
-      final bool hadNone = _scopeController == null;
+    final bool changed = !identical(found, _scopeController);
+
+    if (changed) {
       _scopeController = found;
       // A scope appeared above a slot that had been running standalone. Drop
       // the private ticker rather than animating on two clocks.
@@ -160,9 +167,14 @@ class _SeamSlotState<T> extends State<SeamSlot<T>>
         _fallbackController!.dispose();
         _fallbackController = null;
       }
-      // The new scope may carry a different schedule, so restart the clock
-      // rather than finishing this load on the old one's thresholds.
-      if (!hadNone && widget.value.isResolving) _beginResolving();
+    }
+
+    // Start on the first pass, and restart whenever the scope — and so
+    // possibly the schedule — changes underneath us. Other dependency changes
+    // must not reset the clock on a load already in flight.
+    if ((changed || !_scheduleStarted) && widget.value.isResolving) {
+      _scheduleStarted = true;
+      _beginResolving();
     }
   }
 
@@ -173,8 +185,10 @@ class _SeamSlotState<T> extends State<SeamSlot<T>>
     final bool isResolving = widget.value.isResolving;
 
     if (isResolving && !wasResolving) {
+      _scheduleStarted = true;
       _beginResolving();
     } else if (!isResolving && wasResolving) {
+      _scheduleStarted = false;
       _endResolving();
     }
     if (oldWidget.id != widget.id) _lastRecorded = null;

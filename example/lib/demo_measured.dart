@@ -67,7 +67,9 @@ class _MeasuredDemoState extends State<MeasuredDemo> {
       _title = const SeamValue<String>.absent();
       _body_ = const SeamValue<String>.absent();
     });
-    _timer = Timer(const Duration(milliseconds: 1100), () {
+    // Long enough that the bones can actually be read before the
+    // content lands. A teaching demo, not a benchmark.
+    _timer = Timer(const Duration(milliseconds: 2400), () {
       if (!mounted) return;
       setState(() {
         _title = const SeamValue<String>.fresh('Measured, not guessed');
@@ -90,42 +92,42 @@ class _MeasuredDemoState extends State<MeasuredDemo> {
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 18),
-        // Both columns are equalised with IntrinsicHeight, which asks the
-        // placeholder for its intrinsic height. Bones answer that from the
-        // memory during layout, so this no longer throws.
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Expanded(
-                child: _Column(
-                  label: 'Guesses every time',
-                  sublabel: 'SeamMemory.none()',
-                  memory: _forgetful,
-                  palette: widget.palette,
-                  title: _title,
-                  body: _body_,
-                  shift: _guessedShift,
-                  bad: true,
-                  onShift: (double d) => setState(() => _guessedShift += d),
-                ),
+        // Deliberately NOT wrapped in IntrinsicHeight. Slots support it now,
+        // but equalising the two columns coupled them: stretching both to the
+        // taller one made the measured column report the guessed column's
+        // shift. The columns have to stay independent for the numbers below
+        // to mean anything. The intrinsic support is covered by tests instead.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: _Column(
+                label: 'Guesses every time',
+                sublabel: 'SeamMemory.none()',
+                memory: _forgetful,
+                palette: widget.palette,
+                title: _title,
+                body: _body_,
+                shift: _guessedShift,
+                bad: true,
+                onShift: (double d) => setState(() => _guessedShift += d),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _Column(
-                  label: 'Remembers the shape',
-                  sublabel: 'SeamMemory.inMemory()',
-                  memory: _remembering,
-                  palette: widget.palette,
-                  title: _title,
-                  body: _body_,
-                  shift: _measuredShift,
-                  bad: false,
-                  onShift: (double d) => setState(() => _measuredShift += d),
-                ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: _Column(
+                label: 'Remembers the shape',
+                sublabel: 'SeamMemory.inMemory()',
+                memory: _remembering,
+                palette: widget.palette,
+                title: _title,
+                body: _body_,
+                shift: _measuredShift,
+                bad: false,
+                onShift: (double d) => setState(() => _measuredShift += d),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 22),
         Center(
