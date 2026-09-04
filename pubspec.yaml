@@ -1,0 +1,33 @@
+name: seam
+description: >-
+  Loading states that do not lie. Skeletons measured from real content so the
+  arrival moves nothing, per-field resolution for streamed data, and a
+  four-state value model instead of a boolean.
+version: 0.1.0
+repository: https://github.com/unanswered-dev/seam
+issue_tracker: https://github.com/unanswered-dev/seam/issues
+
+topics:
+  - loading
+  - skeleton
+  - shimmer
+  - placeholder
+  - ui
+
+environment:
+  sdk: ^3.13.1
+  # Verified against Flutter 3.47.1. The floor is conservative: widgets.dart
+  # stopped re-exporting rendering.dart in the 3.44 restructure, and sealed
+  # classes need Dart 3.
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

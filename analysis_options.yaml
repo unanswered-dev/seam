@@ -1,0 +1,22 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Render objects and controllers expose private backing fields through
+    # setters that call markNeedsPaint/notifyListeners. Their constructors take
+    # *named* parameters, and Dart forbids `this._field` in a named parameter,
+    # so the suggested fix is not expressible. Same reason the Flutter SDK
+    # disables this rule in its own rendering layer.
+    prefer_initializing_formals: false
+
+    # Public API of a package: every exported symbol carries documentation.
+    public_member_api_docs: true

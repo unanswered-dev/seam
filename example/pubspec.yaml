@@ -1,0 +1,23 @@
+name: seam_example
+description: Demonstrates measured bones, per-field resolution and the schedule.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.13.1
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  seam:
+    path: ../
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
