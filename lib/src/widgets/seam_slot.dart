@@ -290,32 +290,24 @@ class _SeamSlotState<T> extends State<SeamSlot<T>>
   }
 
   Widget _buildPlaceholder(BuildContext context, SeamController controller) {
-    final SeamPhase phase = _phase;
     // Slot beats scope beats platform brightness.
-    final SeamPalette palette =
-        controller.palette ?? SeamPalette.of(context);
-    final Color base = widget.baseColor ?? palette.base;
-    final Color highlight = widget.highlightColor ?? palette.highlight;
+    final SeamPalette palette = controller.palette ?? SeamPalette.of(context);
 
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final Size? remembered =
-            controller.memory.reserveFor(widget.id, constraints);
-
-        final double? width = remembered?.width ?? widget.fallbackWidth;
-        final double height = remembered?.height ?? widget.fallbackHeight;
-
-        return SeamBone(
-          controller: controller,
-          width: (width != null && width.isFinite) ? width : null,
-          height: height,
-          borderRadius: widget.borderRadius,
-          base: base,
-          highlight: highlight,
-          // Held: lay out and reserve the measured space, but paint nothing.
-          lit: phase != SeamPhase.held,
-        );
-      },
+    // No LayoutBuilder here. The bone reads the memory in its own
+    // performLayout, which is what lets a placeholder be measured for
+    // intrinsic dimensions and sit inside IntrinsicHeight or an intrinsic
+    // Table column.
+    return SeamBone(
+      controller: controller,
+      memory: controller.memory,
+      slotId: widget.id,
+      width: widget.fallbackWidth,
+      height: widget.fallbackHeight,
+      borderRadius: widget.borderRadius,
+      base: widget.baseColor ?? palette.base,
+      highlight: widget.highlightColor ?? palette.highlight,
+      // Held: lay out and reserve the measured space, but paint nothing.
+      lit: _phase != SeamPhase.held,
     );
   }
 }
@@ -399,6 +391,25 @@ class _RenderReserveBox extends RenderProxyBox {
     markNeedsLayout();
   }
 
+  Size? _reserved(BoxConstraints constraints) =>
+      _memory.reserveFor(_slotId, constraints);
+
+  @override
+  double computeMinIntrinsicHeight(double width) => math.max(
+        super.computeMinIntrinsicHeight(width),
+        width.isFinite
+            ? (_reserved(BoxConstraints(maxWidth: width))?.height ?? 0)
+            : 0,
+      );
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => math.max(
+        super.computeMaxIntrinsicHeight(width),
+        width.isFinite
+            ? (_reserved(BoxConstraints(maxWidth: width))?.height ?? 0)
+            : 0,
+      );
+
   @override
   void performLayout() {
     final RenderBox? child = this.child;
@@ -408,7 +419,7 @@ class _RenderReserveBox extends RenderProxyBox {
     }
     child.layout(constraints, parentUsesSize: true);
 
-    final Size? reserved = _memory.reserveFor(_slotId, constraints);
+    final Size? reserved = _reserved(constraints);
     final double height = reserved == null
         ? child.size.height
         : math.max(child.size.height, reserved.height);

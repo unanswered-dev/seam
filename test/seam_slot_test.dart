@@ -203,6 +203,7 @@ void main() {
   });
 
   _reserveTests();
+  _intrinsicTests();
 
   group('scope', () {
     testWidgets('a slot works with no scope above it', (WidgetTester t) async {
@@ -402,6 +403,100 @@ void _reserveTests() {
       ));
       await t.pump();
       expect(t.getSize(find.byType(SeamSlot<String>)).height, 20);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Intrinsic dimensions.
+// ---------------------------------------------------------------------------
+
+Widget intrinsicHarness({
+  required SeamValue<String> value,
+  required SeamMemory memory,
+}) {
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: Center(
+      child: SizedBox(
+        width: kSlotWidth,
+        child: SeamScope(
+          memory: memory,
+          schedule: const SeamSchedule.always(),
+          // The case that used to throw: LayoutBuilder cannot be measured for
+          // intrinsic dimensions, and the placeholder used to contain one.
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Expanded(
+                  child: SeamSlot<String>(
+                    id: 'article.body',
+                    value: value,
+                    fallbackHeight: 16,
+                    builder: (BuildContext context, String v) =>
+                        SizedBox(height: kContentHeight, child: Text(v)),
+                  ),
+                ),
+                const SizedBox(width: 8, child: ColoredBox(color: Color(0xFF000000))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+void _intrinsicTests() {
+  group('intrinsic dimensions', () {
+    testWidgets('a placeholder survives IntrinsicHeight',
+        (WidgetTester t) async {
+      await t.pumpWidget(intrinsicHarness(
+        value: const SeamValue<String>.absent(),
+        memory: SeamMemory.inMemory(),
+      ));
+      expect(t.takeException(), isNull);
+      expect(find.byType(SeamBone), findsOneWidget);
+    });
+
+    testWidgets('the intrinsic height is the measured height',
+        (WidgetTester t) async {
+      final SeamMemory memory = SeamMemory.inMemory();
+
+      // Measure real content first.
+      await t.pumpWidget(intrinsicHarness(
+        value: const SeamValue<String>.fresh('hello'),
+        memory: memory,
+      ));
+      await t.pump();
+
+      // IntrinsicHeight sizes the row from the placeholder's intrinsic height,
+      // which should be what the content actually measured, not the fallback.
+      await t.pumpWidget(intrinsicHarness(
+        value: const SeamValue<String>.absent(),
+        memory: memory,
+      ));
+      await t.pump();
+      expect(t.takeException(), isNull);
+      expect(t.getSize(find.byType(SeamBone)).height, kContentHeight);
+    });
+
+    testWidgets('resolved content survives IntrinsicHeight too',
+        (WidgetTester t) async {
+      // The reserving path has to be intrinsic-safe as well.
+      final SeamMemory memory = SeamMemory.inMemory();
+      await t.pumpWidget(intrinsicHarness(
+        value: const SeamValue<String>.fresh('hello'),
+        memory: memory,
+      ));
+      await t.pump();
+      await t.pumpWidget(intrinsicHarness(
+        value: const SeamValue<String>.partial('hel'),
+        memory: memory,
+      ));
+      await t.pump();
+      expect(t.takeException(), isNull);
     });
   });
 }

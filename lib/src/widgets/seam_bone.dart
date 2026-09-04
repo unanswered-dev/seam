@@ -1,6 +1,7 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../memory/seam_memory.dart';
 import '../scope/seam_scope.dart';
 
 /// One painted placeholder shape.
@@ -14,6 +15,8 @@ class SeamBone extends LeafRenderObjectWidget {
   const SeamBone({
     super.key,
     required this.controller,
+    this.memory,
+    this.slotId,
     this.width,
     this.height,
     this.borderRadius = const BorderRadius.all(Radius.circular(4)),
@@ -25,10 +28,22 @@ class SeamBone extends LeafRenderObjectWidget {
   /// The scope controller supplying phase, light and scope size.
   final SeamController controller;
 
-  /// Width, or null to take the incoming maximum.
+  /// Where to look up the shape measured for [slotId].
+  ///
+  /// The lookup happens during layout rather than through a `LayoutBuilder`,
+  /// so a bone can be measured for intrinsic dimensions and works inside
+  /// `IntrinsicHeight`, `IntrinsicWidth` and intrinsic `Table` columns.
+  final SeamMemory? memory;
+
+  /// The slot id to look up in [memory]. Both must be set for a lookup.
+  final String? slotId;
+
+  /// Fallback width used when nothing has been measured. Null takes the
+  /// incoming maximum.
   final double? width;
 
-  /// Height, or null to take the incoming maximum.
+  /// Fallback height used when nothing has been measured. Null takes the
+  /// incoming maximum.
   final double? height;
 
   /// Corner rounding.
@@ -51,6 +66,8 @@ class SeamBone extends LeafRenderObjectWidget {
   RenderSeamBone createRenderObject(BuildContext context) {
     return RenderSeamBone(
       controller: controller,
+      memory: memory,
+      slotId: slotId,
       preferredWidth: width,
       preferredHeight: height,
       borderRadius: borderRadius,
@@ -64,6 +81,8 @@ class SeamBone extends LeafRenderObjectWidget {
   void updateRenderObject(BuildContext context, RenderSeamBone renderObject) {
     renderObject
       ..controller = controller
+      ..memory = memory
+      ..slotId = slotId
       ..preferredWidth = width
       ..preferredHeight = height
       ..borderRadius = borderRadius
@@ -78,6 +97,8 @@ class RenderSeamBone extends RenderBox {
   /// Creates the render object.
   RenderSeamBone({
     required SeamController controller,
+    required SeamMemory? memory,
+    required String? slotId,
     required double? preferredWidth,
     required double? preferredHeight,
     required BorderRadius borderRadius,
@@ -85,6 +106,8 @@ class RenderSeamBone extends RenderBox {
     required Color highlight,
     required bool lit,
   })  : _controller = controller,
+        _memory = memory,
+        _slotId = slotId,
         _preferredWidth = preferredWidth,
         _preferredHeight = preferredHeight,
         _borderRadius = borderRadius,
@@ -106,6 +129,26 @@ class RenderSeamBone extends RenderBox {
       _controller = value;
     }
     markNeedsPaint();
+  }
+
+  SeamMemory? _memory;
+
+  /// Where measured geometry is read from during layout.
+  SeamMemory? get memory => _memory;
+  set memory(SeamMemory? value) {
+    if (identical(_memory, value)) return;
+    _memory = value;
+    markNeedsLayout();
+  }
+
+  String? _slotId;
+
+  /// The slot id looked up in [memory].
+  String? get slotId => _slotId;
+  set slotId(String? value) {
+    if (_slotId == value) return;
+    _slotId = value;
+    markNeedsLayout();
   }
 
   double? _preferredWidth;
@@ -202,13 +245,39 @@ class RenderSeamBone extends RenderBox {
   @override
   bool get sizedByParent => false;
 
+  /// The shape recorded for this slot under [constraints], if any.
+  Size? _remembered(BoxConstraints constraints) {
+    final SeamMemory? memory = _memory;
+    final String? id = _slotId;
+    if (memory == null || id == null) return null;
+    return memory.reserveFor(id, constraints);
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final Size? remembered = _remembered(constraints);
+    final double width = remembered?.width ??
+        _preferredWidth ??
+        (constraints.hasBoundedWidth ? constraints.maxWidth : 0.0);
+    final double height = remembered?.height ??
+        _preferredHeight ??
+        (constraints.hasBoundedHeight ? constraints.maxHeight : 0.0);
+    return constraints.constrain(Size(width, height));
+  }
+
   @override
   void performLayout() {
-    final double width = _preferredWidth ??
-        (constraints.hasBoundedWidth ? constraints.maxWidth : 0.0);
-    final double height = _preferredHeight ??
-        (constraints.hasBoundedHeight ? constraints.maxHeight : 0.0);
-    size = constraints.constrain(Size(width, height));
+    size = computeDryLayout(constraints);
+  }
+
+  /// Intrinsics get the same answer layout would, where the memory can supply
+  /// one. A parent asking for an intrinsic passes a width rather than
+  /// constraints, so both the loose and tight readings of that width are tried
+  /// before falling back to the declared size.
+  Size? _rememberedForWidth(double width) {
+    if (!width.isFinite) return null;
+    return _remembered(BoxConstraints(maxWidth: width)) ??
+        _remembered(BoxConstraints.tightFor(width: width));
   }
 
   @override
@@ -218,10 +287,12 @@ class RenderSeamBone extends RenderBox {
   double computeMaxIntrinsicWidth(double height) => _preferredWidth ?? 0;
 
   @override
-  double computeMinIntrinsicHeight(double width) => _preferredHeight ?? 0;
+  double computeMinIntrinsicHeight(double width) =>
+      _rememberedForWidth(width)?.height ?? _preferredHeight ?? 0;
 
   @override
-  double computeMaxIntrinsicHeight(double width) => _preferredHeight ?? 0;
+  double computeMaxIntrinsicHeight(double width) =>
+      _rememberedForWidth(width)?.height ?? _preferredHeight ?? 0;
 
   @override
   bool hitTestSelf(Offset position) => true;

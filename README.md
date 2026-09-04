@@ -264,14 +264,6 @@ point is to learn the shape rows share.
 
 ## Known limitations
 
-**A `SeamSlot` in the `absent` state cannot sit inside `IntrinsicHeight` or
-`IntrinsicWidth`.** Its placeholder uses a `LayoutBuilder` to read the
-constraints it needs for the memory lookup, and `LayoutBuilder` refuses
-intrinsic measurement. The same applies to `Table` with intrinsic column
-widths. Give the slot a bounded parent instead. The fix is to move the lookup
-into the render object's `performLayout` — which is how `reserveWhileResolving`
-already works — and it is not done yet.
-
 **Performance claims here are architectural, not measured.** Bones cost no
 `saveLayer` and share one ticker by construction, but the package has not been
 profiled against `shimmer` on a real device.

@@ -90,39 +90,42 @@ class _MeasuredDemoState extends State<MeasuredDemo> {
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 18),
-        // Note: no IntrinsicHeight here. A SeamSlot placeholder contains a
-        // LayoutBuilder, which cannot be measured for intrinsic dimensions.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _Column(
-                label: 'Guesses every time',
-                sublabel: 'SeamMemory.none()',
-                memory: _forgetful,
-                palette: widget.palette,
-                title: _title,
-                body: _body_,
-                shift: _guessedShift,
-                bad: true,
-                onShift: (double d) => setState(() => _guessedShift += d),
+        // Both columns are equalised with IntrinsicHeight, which asks the
+        // placeholder for its intrinsic height. Bones answer that from the
+        // memory during layout, so this no longer throws.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                child: _Column(
+                  label: 'Guesses every time',
+                  sublabel: 'SeamMemory.none()',
+                  memory: _forgetful,
+                  palette: widget.palette,
+                  title: _title,
+                  body: _body_,
+                  shift: _guessedShift,
+                  bad: true,
+                  onShift: (double d) => setState(() => _guessedShift += d),
+                ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: _Column(
-                label: 'Remembers the shape',
-                sublabel: 'SeamMemory.inMemory()',
-                memory: _remembering,
-                palette: widget.palette,
-                title: _title,
-                body: _body_,
-                shift: _measuredShift,
-                bad: false,
-                onShift: (double d) => setState(() => _measuredShift += d),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _Column(
+                  label: 'Remembers the shape',
+                  sublabel: 'SeamMemory.inMemory()',
+                  memory: _remembering,
+                  palette: widget.palette,
+                  title: _title,
+                  body: _body_,
+                  shift: _measuredShift,
+                  bad: false,
+                  onShift: (double d) => setState(() => _measuredShift += d),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 22),
         Center(
